@@ -9,4 +9,5 @@
 .settings
 
 #Gradle
+.gradle
 build
