@@ -1,10 +1,7 @@
 package com.redgear.jpm
 
-import org.apache.ivy.Ivy
-import org.apache.ivy.core.IvyContext
-import org.apache.ivy.core.module.id.ModuleRevisionId
-import org.apache.ivy.core.report.ArtifactDownloadReport
-import org.apache.ivy.core.resolve.ResolveOptions
+import com.redgear.jpm.repos.Repository
+import com.redgear.jpm.repos.impl.AetherRepo
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -17,6 +14,8 @@ class Main {
 
     public static void main(String[] args) {
         def cli = new CliBuilder(usage: 'jpm [COMMAND]')
+
+        log.info "Starting"
 
         cli.with {
             h longOpt: 'help', 'Show usage information'
@@ -42,54 +41,47 @@ class Main {
             return
         }
 
-        log.debug "Running"
+        log.info "Running"
 
         if (options.i) {
-            File ivySettings = new File(System.getProperty("user.home") + "/.jpm/ivysettings.xml")
 
-            if (!ivySettings.exists()) {
-                createDefaultSettings(ivySettings)
-            }
-
-            def ivy = Ivy.newInstance()
-
-            ivy.configure(ivySettings)
-
-            log.info "Installing: "
-
-            String[] confs = ['default'];
-            ResolveOptions resolveOptions = new ResolveOptions().setConfs(confs);
+            log.info "Installing"
+            Repository repo = new AetherRepo()
 
             options.arguments().each {
 
                 def split = it.split(":")
 
-                ModuleRevisionId mod = ModuleRevisionId.newInstance(split[0], split[1], split[2])
-
-                log.info "Resolving: {}", mod
-
-                def report = ivy.resolve(mod, resolveOptions, false)
-
-                if (report.hasError()) {
-                    throw new RuntimeException(report.allProblemMessages.join(", "))
+                if(split.length < 3 || split.length > 4) {
+                    throw new RuntimeException("Invalid Maven Coords: $it")
                 }
 
-                def artifacts = report.getAllArtifactsReports().toList()
+                def group = split[0]
+                def artifact = split[1]
+                def version = split[2]
 
-                def mainArtifact = report.getArtifactsReports(mod)[0]
+                //So we can take the ones that have group:artifact:jar:version.
+                if(split.length == 4) {
+                    artifact = split[2]
+                    version = split[3]
+                }
 
-                def name = options.name ?: mainArtifact.artifact.name
+
+                Repository.Package mod = repo.resolvePackage(group, artifact, version)
+
+                def name = options.name ?: artifact
+
+                def main = options.main ?: new JarFile(mod.main).manifest.mainAttributes.getValue("Main-Class")
+
+                if(!main)
+                    throw new RuntimeException("No main method specified!")
 
                 File libDir = new File(System.getProperty("user.home") + "/.jpm/lib/$name")
                 libDir.deleteDir()
                 libDir.mkdirs()
 
-                artifacts.each { copy(libDir, it) }
-
-                def main = options.main ?: new JarFile(mainArtifact.localFile).manifest.mainAttributes.getValue("Main-Class")
-
-                if(!main)
-                    throw new RuntimeException("No main method specified!")
+                copy(libDir, mod.main)
+                mod.dependencies.each { copy(libDir, it) }
 
                 createBatch(new File(System.getProperty("user.home") + "/.jpm/bin/${name}.bat"), main, libDir)
 
@@ -108,8 +100,7 @@ class Main {
         }
     }
 
-    static File copy(File dir, ArtifactDownloadReport report) {
-        def localFile = report.localFile
+    static File copy(File dir, File localFile) {
         def fileName = localFile.name
 
         def newLocal = new File(dir, fileName)
@@ -123,24 +114,6 @@ class Main {
         return newLocal
     }
 
-    static void createDefaultSettings(File settings) {
-        log.info "Creating default ivy settings file"
-
-        settings.parentFile.mkdir()
-
-        settings << '''
-<ivysettings>
-    <settings defaultResolver="default"/>
-    <resolvers>
-        <chain name="default">
-            <ibiblio name="local-m2" m2compatible="true" root="file:///${user.home}/.m2/repository"/>
-            <ibiblio name="central" m2compatible="true"/>
-        </chain>
-    </resolvers>
-</ivysettings>
-'''
-    }
-
 
     static void createBatch(File location, String main, File libDir) {
         location.parentFile.mkdirs()
@@ -149,7 +122,7 @@ class Main {
 
         location << """
 @echo off
-java -classpath "$libDir/*" $main
+java -classpath "$libDir/*" $main %*
 """
     }
 
