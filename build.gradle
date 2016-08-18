@@ -5,7 +5,7 @@ apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'application'
 
-mainClassName =  'com.redgear.jpm.Main'
+mainClassName =  'com.redgear.vine.Main'
 
 run {
     def exec = System.getProperty("exec.args")
@@ -27,7 +27,8 @@ repositories {
 
 dependencies {
     compile 'org.codehaus.groovy:groovy-all:2.4.4'
-    compile 'commons-cli:commons-cli:1.3.1'
+
+    compile 'net.sourceforge.argparse4j:argparse4j:0.7.0'
 
     compile 'org.apache.ivy:ivy:2.4.0'
 

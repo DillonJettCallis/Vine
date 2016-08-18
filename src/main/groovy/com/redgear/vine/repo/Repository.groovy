@@ -1,4 +1,4 @@
-package com.redgear.jpm.repos
+package com.redgear.vine.repo
 
 /**
  * Created by LordBlackHole on 7/4/2016.

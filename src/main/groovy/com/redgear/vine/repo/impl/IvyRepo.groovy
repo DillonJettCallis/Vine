@@ -1,10 +1,8 @@
-package com.redgear.jpm.repos.impl
+package com.redgear.vine.repo.impl
 
-import com.redgear.jpm.repos.Repository
+import com.redgear.vine.repo.Repository
 import org.apache.ivy.Ivy
-import org.apache.ivy.core.IvyContext
 import org.apache.ivy.core.module.id.ModuleRevisionId
-import org.apache.ivy.core.report.ArtifactDownloadReport
 import org.apache.ivy.core.resolve.ResolveOptions
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
