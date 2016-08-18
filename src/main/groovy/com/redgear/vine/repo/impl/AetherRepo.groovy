@@ -79,6 +79,11 @@ class AetherRepo implements Repository {
             List<File> getDependencies() {
                 return artifactResults
             }
+
+            @Override
+            String toString() {
+                return mainFile.toString()
+            }
         }
     }
 
