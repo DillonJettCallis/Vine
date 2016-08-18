@@ -1,8 +1,7 @@
 package com.redgear.vine.task
 
+import com.redgear.vine.config.Config
 import net.sourceforge.argparse4j.inf.Namespace
-
-import java.nio.file.Path
 
 /**
  * Created by LordBlackHole on 8/16/2016.
@@ -10,7 +9,7 @@ import java.nio.file.Path
 interface Task {
 
 
-    void runTask(Path workingDir, Namespace namespace)
+    void runTask(Config config, Namespace namespace)
 
 
 

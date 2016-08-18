@@ -1,5 +1,9 @@
 package com.redgear.vine.task
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.redgear.vine.config.Config
+import com.redgear.vine.config.InstallType
+import com.redgear.vine.config.InstalledData
 import com.redgear.vine.repo.Repository
 import com.redgear.vine.repo.impl.AetherRepo
 import net.sourceforge.argparse4j.inf.Namespace
@@ -18,69 +22,89 @@ class InstallTask implements Task {
 
     private static final Logger log = LoggerFactory.getLogger(InstallTask.class)
 
-    private final Repository repo = new AetherRepo()
-
     @Override
-    void runTask(Path workingDir, Namespace namespace) {
+    void runTask(Config config, Namespace namespace) {
+        Repository repo = new AetherRepo(config)
+        def workingDir = config.installDir.toPath()
         String nameArg = namespace.getString('name')
         String mainArg = namespace.getString('main')
 
-        List<String> arguments =  namespace.getList('args')
+        String coords =  namespace.getString('coords')
 
 
         log.info "Installing"
 
-        arguments.each {
-
-            def split = it.split(":")
-
-            if(split.length < 3 || split.length > 4) {
-                throw new RuntimeException("Invalid Maven Coords: $it")
-            }
-
-            def group = split[0]
-            def artifact = split[1]
-            def version = split[2]
-
-            //So we can take the ones that have group:artifact:jar:version.
-            if(split.length == 4) {
-                artifact = split[2]
-                version = split[3]
-            }
-
-            def name = nameArg ?: artifact
-
-            if(checkForBin(workingDir, name, group, artifact, version))
-                return
-
-            Repository.Package mod = repo.resolvePackage(group, artifact, version)
 
 
+        def split = coords.split(":")
 
-            def main = mainArg ?: new JarFile(mod.main).manifest.mainAttributes.getValue("Main-Class")
-
-            if(!main)
-                throw new RuntimeException("No main method specified!")
-
-
-
-            File libDir =  workingDir.resolve("lib/$name").toFile()
-            libDir.deleteDir()
-            libDir.mkdirs()
-
-            copy(libDir, mod.main)
-            mod.dependencies.each { copy(libDir, it) }
-
-            def binDir = workingDir.resolve('bin')
-
-            createBatch(binDir.resolve("${name}.bat").toFile(), main, libDir)
-
-            createBash(binDir.resolve(name).toFile(), main, libDir)
+        if(split.length < 3 || split.length > 4) {
+            throw new RuntimeException("Invalid Maven Coords: $it")
         }
+
+        def group = split[0]
+        def artifact = split[1]
+        def version = split[2]
+
+        //So we can take the ones that have group:artifact:jar:version.
+        if(split.length == 4) {
+            artifact = split[2]
+            version = split[3]
+        }
+
+        def name = nameArg ?: artifact
+
+        checkConfig(workingDir, name)
+
+
+        if(checkForBin(repo, workingDir, name, group, artifact, version))
+            return
+
+        Repository.Package mod = repo.resolvePackage(group, artifact, version)
+
+
+
+        def main = mainArg ?: new JarFile(mod.main).manifest.mainAttributes.getValue("Main-Class")
+
+        if(!main)
+            throw new RuntimeException("No main method specified!")
+
+
+        File libDir =  workingDir.resolve("lib/$name").toFile()
+        libDir.deleteDir()
+        libDir.mkdirs()
+
+
+        def data = new InstalledData()
+
+        data.installDir = libDir
+        data.groupId = group
+        data.artifactId = artifact
+        data.version = version
+        data.name = name
+        data.type = InstallType.JAR
+
+        copy(libDir, mod.main)
+        mod.dependencies.each { copy(libDir, it) }
+
+        def binDir = workingDir.resolve('bin')
+
+        def batFile = binDir.resolve("${name}.bat").toFile()
+
+        createBatch(batFile, main, libDir)
+
+        def bashFile = binDir.resolve(name).toFile()
+
+        createBash(bashFile, main, libDir)
+
+        data.scripts = [batFile, bashFile]
+
+        writeData(workingDir.resolve('data').resolve(name + '.json').toFile(), data)
+
 
     }
 
-    boolean checkForBin(Path workingDir, String name, String group, String artifact, String version) {
+    static boolean checkForBin(Repository repo, Path workingDir, String name, String group, String artifact, String version) {
         try {
             Repository.Package bin = repo.resolvePackage(group, artifact + ":zip:bin", version)
 
@@ -108,6 +132,16 @@ class InstallTask implements Task {
                     }
             }
 
+            def data = new InstalledData()
+
+            data.installDir = libDir.toFile()
+            data.groupId = group
+            data.artifactId = artifact
+            data.version = version
+            data.name = name
+            data.type = InstallType.BIN
+            data.scripts = []
+
             def sourceDir = libDir.resolve('bin')
 
             if(sourceDir.toFile().exists()) {
@@ -123,15 +157,30 @@ class InstallTask implements Task {
                         def binDir = workingDir.resolve('bin')
                         def fileName = it.name.substring(0, it.name.lastIndexOf('.'))
 
-                        createBinBatch(binDir.resolve(fileName + '.bat').toFile(), it)
-                        createBinBash(binDir.resolve(fileName).toFile(), sourceDir.resolve(fileName).toFile())
+                        def batFile = binDir.resolve(fileName + '.bat').toFile()
+
+                        createBinBatch(batFile, it)
+
+                        data.scripts.add(batFile)
+
+
+                        def bashSource = sourceDir.resolve(fileName).toFile()
+
+                        if(bashSource.exists()) {
+                            def bashFile = binDir.resolve(fileName).toFile()
+
+                            createBinBash(bashFile, bashSource)
+
+                            data.scripts.add(bashFile)
+                        }
                     }
                 }
             }
 
+            writeData(workingDir.resolve('data').resolve(name + '.json').toFile(), data)
 
         } catch (Exception e) {
-            log.info "Couldn't find a bin", e
+            log.info "Couldn't find a bin"
             return false
         }
 
@@ -194,6 +243,22 @@ $libDir %*
         location << """
 $libDir
 """
+    }
+
+
+    static void checkConfig(Path workingDir, String name) {
+        def file = workingDir.resolve('data').resolve(name).toFile()
+
+        if(file.exists()) {
+            throw new RuntimeException("Artifact ${name} is already installed!")
+        }
+
+    }
+
+    static void writeData(File location, InstalledData data) {
+        location.parentFile.mkdirs()
+
+        new ObjectMapper().writeValue(location, data)
     }
 
 }

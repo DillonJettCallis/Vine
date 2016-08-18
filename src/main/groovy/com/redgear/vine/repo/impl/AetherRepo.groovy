@@ -1,30 +1,31 @@
 package com.redgear.vine.repo.impl
 
+import com.redgear.vine.config.Config
 import com.redgear.vine.repo.Repository
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils
-import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.DefaultRepositorySystemSession
 import org.eclipse.aether.RepositorySystem
 import org.eclipse.aether.RepositorySystemSession
 import org.eclipse.aether.artifact.Artifact
 import org.eclipse.aether.artifact.DefaultArtifact
-import org.eclipse.aether.collection.CollectRequest;
+import org.eclipse.aether.collection.CollectRequest
 import org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory
 import org.eclipse.aether.graph.Dependency
-import org.eclipse.aether.graph.DependencyFilter;
+import org.eclipse.aether.graph.DependencyFilter
 import org.eclipse.aether.impl.DefaultServiceLocator
 import org.eclipse.aether.repository.LocalRepository
 import org.eclipse.aether.repository.RemoteRepository
-import org.eclipse.aether.resolution.DependencyRequest;
-import org.eclipse.aether.spi.connector.RepositoryConnectorFactory;
-import org.eclipse.aether.spi.connector.transport.TransporterFactory;
-import org.eclipse.aether.transport.file.FileTransporterFactory;
+import org.eclipse.aether.resolution.DependencyRequest
+import org.eclipse.aether.spi.connector.RepositoryConnectorFactory
+import org.eclipse.aether.spi.connector.transport.TransporterFactory
+import org.eclipse.aether.transport.file.FileTransporterFactory
 import org.eclipse.aether.transport.http.HttpTransporterFactory
 import org.eclipse.aether.util.artifact.JavaScopes
 import org.eclipse.aether.util.filter.DependencyFilterUtils
 import org.eclipse.aether.util.graph.selector.AndDependencySelector
 import org.eclipse.aether.util.graph.selector.OptionalDependencySelector
 import org.slf4j.Logger
-import org.slf4j.LoggerFactory;
+import org.slf4j.LoggerFactory
 
 /**
  * Created by LordBlackHole on 7/4/2016.
@@ -34,11 +35,16 @@ class AetherRepo implements Repository {
     private static final Logger log = LoggerFactory.getLogger(AetherRepo.class)
     private final RepositorySystem system
     private final RepositorySystemSession session
+    private final List<RemoteRepository> repos;
 
-    AetherRepo() {
+    AetherRepo(Config config) {
         system = newRepositorySystem();
 
-        session = newRepositorySystemSession( system );
+        session = newRepositorySystemSession( system, config.localCache );
+
+        repos = config.repos.collect {
+            new RemoteRepository.Builder( it.name, "default", it.uri.toString() ).build()
+        }
     }
 
 
@@ -101,11 +107,11 @@ class AetherRepo implements Repository {
         return new RemoteRepository.Builder( "central", "default", "https://repo1.maven.org/maven2/" ).build();
     }
 
-    public static DefaultRepositorySystemSession newRepositorySystemSession(RepositorySystem system )
+    public static DefaultRepositorySystemSession newRepositorySystemSession(RepositorySystem system, File localRepoFile )
     {
         DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
 
-        LocalRepository localRepo = new LocalRepository(System.getProperty("user.home") + "/.m2/repository");
+        LocalRepository localRepo = new LocalRepository(localRepoFile);
         session.setLocalRepositoryManager( system.newLocalRepositoryManager( session, localRepo ) );
 
         session.setDependencySelector(new AndDependencySelector(session.getDependencySelector(), new OptionalDependencySelector().deriveChildSelector(null)))
