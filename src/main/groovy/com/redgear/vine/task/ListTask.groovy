@@ -20,7 +20,7 @@ class ListTask implements Task {
         def files = config.installDir.toPath().resolve('data').toFile().listFiles()
 
         if(!files) {
-            log.info 'No applications installed.'
+            println 'No applications installed.'
             return
         }
 
@@ -29,9 +29,9 @@ class ListTask implements Task {
             def data = loadData(it)
 
             if(verbose) {
-                log.info "${data.name} : GroupId: ${data.groupId}, ArtifactId: ${data.artifactId}, Version: ${data.version}, Installed Dir: ${data.installDir}, Type: ${data.type}, Scripts: ${data.scripts}"
+                println "${data.name}: GroupId: ${data.groupId}, ArtifactId: ${data.artifactId}, Version: ${data.version}, Type: ${data.type}, Installed Dir: ${data.installDir}"
             } else
-                log.info "${data.name} : ${data.version}"
+                println "${data.name}: ${data.version}"
 
         }
 

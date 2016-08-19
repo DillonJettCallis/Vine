@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.redgear.vine.config.Config
 import com.redgear.vine.config.InstallType
 import com.redgear.vine.config.InstalledData
+import com.redgear.vine.exception.VineException
 import com.redgear.vine.repo.Repository
 import com.redgear.vine.repo.impl.AetherRepo
 import net.sourceforge.argparse4j.inf.Namespace
@@ -32,14 +33,14 @@ class InstallTask implements Task {
         String coords =  namespace.getString('coords')
 
 
-        log.info "Installing"
+        log.info 'Installing'
 
 
 
         def split = coords.split(":")
 
         if(split.length < 3 || split.length > 4) {
-            throw new RuntimeException("Invalid Maven Coords: $it")
+            throw new VineException("Invalid Maven Coords: $coords")
         }
 
         def group = split[0]
@@ -67,7 +68,7 @@ class InstallTask implements Task {
         def main = mainArg ?: new JarFile(mod.main).manifest.mainAttributes.getValue("Main-Class")
 
         if(!main)
-            throw new RuntimeException("No main method specified!")
+            throw new VineException("No main method specified!")
 
 
         File libDir =  workingDir.resolve("lib/$name").toFile()
@@ -119,7 +120,7 @@ class InstallTask implements Task {
             zip.entries.each { entry ->
                 def snippedName = entry.name.substring(entry.name.indexOf('/') + 1)
 
-                log.info 'Found entry: {}, snipped: {}', entry.name, snippedName
+                log.debug 'Found entry: {}, snipped: {}', entry.name, snippedName
 
                 if(snippedName.isEmpty())
                     return
@@ -152,7 +153,7 @@ class InstallTask implements Task {
                         it.name.endsWith('.cmd') || it.name.endsWith('.bat')
                     }.each {
 
-                        log.info 'fileName: {}', it.name
+                        log.debug 'Found batch script: {}', it.name
 
                         def binDir = workingDir.resolve('bin')
                         def fileName = it.name.substring(0, it.name.lastIndexOf('.'))
@@ -168,6 +169,8 @@ class InstallTask implements Task {
 
                         if(bashSource.exists()) {
                             def bashFile = binDir.resolve(fileName).toFile()
+
+                            log.debug 'Found bash script: {}', fileName
 
                             createBinBash(bashFile, bashSource)
 
@@ -225,6 +228,9 @@ java -classpath "$libDir/*" $main
 
 
     static void createBinBatch(File location, File libDir) {
+        if(location.exists())
+            throw new VineException("Batch script ${location} already exists. Have you allready installed this application?")
+
         location.parentFile.mkdirs()
 
         location.delete()
@@ -236,6 +242,9 @@ $libDir %*
     }
 
     static void createBinBash(File location, File libDir) {
+        if(location.exists())
+            throw new VineException("Bash script ${location} already exists. Have you allready installed this application?")
+
         location.parentFile.mkdirs()
 
         location.delete()
@@ -250,7 +259,7 @@ $libDir
         def file = workingDir.resolve('data').resolve(name).toFile()
 
         if(file.exists()) {
-            throw new RuntimeException("Artifact ${name} is already installed!")
+            throw new VineException("Artifact ${name} is already installed!")
         }
 
     }

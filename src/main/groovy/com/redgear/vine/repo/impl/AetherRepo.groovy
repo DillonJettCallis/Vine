@@ -1,6 +1,7 @@
 package com.redgear.vine.repo.impl
 
 import com.redgear.vine.config.Config
+import com.redgear.vine.exception.VineException
 import com.redgear.vine.repo.Repository
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils
 import org.eclipse.aether.DefaultRepositorySystemSession
@@ -63,7 +64,7 @@ class AetherRepo implements Repository {
 
         CollectRequest collectRequest = new CollectRequest();
         collectRequest.setRoot( new Dependency( artifact, JavaScopes.COMPILE ) );
-        collectRequest.setRepositories(newRepositories( system, session ) );
+        collectRequest.setRepositories(repos);
 
         DependencyRequest dependencyRequest = new DependencyRequest( collectRequest, classpathFlter );
 
@@ -93,22 +94,7 @@ class AetherRepo implements Repository {
         }
     }
 
-
-
-
-
-    public static List<RemoteRepository> newRepositories(RepositorySystem system, RepositorySystemSession session )
-    {
-        return new ArrayList<RemoteRepository>( Arrays.asList( newCentralRepository() ) );
-    }
-
-    private static RemoteRepository newCentralRepository()
-    {
-        return new RemoteRepository.Builder( "central", "default", "https://repo1.maven.org/maven2/" ).build();
-    }
-
-    public static DefaultRepositorySystemSession newRepositorySystemSession(RepositorySystem system, File localRepoFile )
-    {
+    public static DefaultRepositorySystemSession newRepositorySystemSession(RepositorySystem system, File localRepoFile ) {
         DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
 
         LocalRepository localRepo = new LocalRepository(localRepoFile);
@@ -119,26 +105,16 @@ class AetherRepo implements Repository {
         return session;
     }
 
-
-
-    public static RepositorySystem newRepositorySystem()
-    {
-        /*
-         * Aether's components implement org.eclipse.aether.spi.locator.Service to ease manual wiring and using the
-         * prepopulated DefaultServiceLocator, we only need to register the repository connector and transporter
-         * factories.
-         */
+    public static RepositorySystem newRepositorySystem() {
         DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();
         locator.addService( RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class );
         locator.addService( TransporterFactory.class, FileTransporterFactory.class );
         locator.addService( TransporterFactory.class, HttpTransporterFactory.class );
 
-        locator.setErrorHandler( new DefaultServiceLocator.ErrorHandler()
-        {
+        locator.setErrorHandler( new DefaultServiceLocator.ErrorHandler() {
             @Override
-            public void serviceCreationFailed( Class<?> type, Class<?> impl, Throwable exception )
-            {
-                exception.printStackTrace();
+            public void serviceCreationFailed( Class<?> type, Class<?> impl, Throwable exception ) {
+                throw new VineException("Failed to resolve artifact: ", exception)
             }
         } );
 
