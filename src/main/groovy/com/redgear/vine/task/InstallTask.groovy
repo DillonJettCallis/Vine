@@ -29,6 +29,7 @@ class InstallTask implements Task {
         def workingDir = config.installDir.toPath()
         String nameArg = namespace.getString('name')
         String mainArg = namespace.getString('main')
+        String additionalArgs = namespace.getString('additional-args') ?: ''
 
         String coords =  namespace.getString('coords')
 
@@ -92,11 +93,11 @@ class InstallTask implements Task {
 
         def batFile = binDir.resolve("${name}.bat").toFile()
 
-        createBatch(batFile, main, libDir)
+        createBatch(batFile, main, libDir, additionalArgs)
 
         def bashFile = binDir.resolve(name).toFile()
 
-        createBash(bashFile, main, libDir)
+        createBash(bashFile, main, libDir, additionalArgs)
 
         data.scripts = [batFile, bashFile]
 
@@ -205,24 +206,24 @@ class InstallTask implements Task {
     }
 
 
-    static void createBatch(File location, String main, File libDir) {
+    static void createBatch(File location, String main, File libDir, String additionalArgs) {
         location.parentFile.mkdirs()
 
         location.delete()
 
         location << """
 @echo off
-java -classpath "$libDir/*" $main %*
+java -classpath "$libDir/*" $main $additionalArgs %*
 """
     }
 
-    static void createBash(File location, String main, File libDir) {
+    static void createBash(File location, String main, File libDir, String additionalArgs) {
         location.parentFile.mkdirs()
 
         location.delete()
 
         location << """
-java -classpath "$libDir/*" $main
+java -classpath "$libDir/*" $main $additionalArgs "\$@"
 """
     }
 

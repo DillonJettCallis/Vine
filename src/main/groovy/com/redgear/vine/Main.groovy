@@ -56,7 +56,7 @@ class Main {
             log.error e.message
             System.exit(100)
         } catch (Exception e) {
-            log.error 'Unexpected error! Please check with https://github.com/DillonJettCallis/Vine/issues and if this issue is not listed, please report it. ', e
+            log.error 'Unexpected error! Please check with https://github.com/RedGear/Vine/issues and if this issue is not listed, please report it. ', e
             System.exit(999)
         }
     }
@@ -77,6 +77,7 @@ class Main {
 
         install.addArgument('-n', '--name').nargs('?').help('Set an alternative name for the program (default is artifactId)')
         install.addArgument('-m', '--main').nargs('?').help('Provide the Main class for this program (default is to look in Manifest)')
+        install.addArgument('-a', '--additional-args').nargs('?').help('Provide a set of additional arguments to be inserted into the Run script for this program, which will pass them along to the JVM')
         install.addArgument('coords').metavar('coordinates').required(true).help('The groupId:artifactId:version of the application in Maven')
 
         def remove = subParsers.addParser('remove').setDefault(taskKey, new RemoveTask()).help('Remove an application installed with vine')
