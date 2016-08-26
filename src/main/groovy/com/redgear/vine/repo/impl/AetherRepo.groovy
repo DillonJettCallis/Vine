@@ -28,6 +28,8 @@ import org.eclipse.aether.util.graph.selector.OptionalDependencySelector
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+import static com.redgear.vine.repo.Repository.*
+
 /**
  * Created by LordBlackHole on 7/4/2016.
  */
@@ -50,7 +52,7 @@ class AetherRepo implements Repository {
 
 
     @Override
-    Repository.Package resolvePackage(String group, String artifactId, String version) {
+    Package resolvePackage(String group, String artifactId, String version) {
 
         def mod = "$group:$artifactId:$version"
 
@@ -76,7 +78,7 @@ class AetherRepo implements Repository {
 
         artifactResults.remove(mainFile)
 
-        return new Repository.Package() {
+        return new Package() {
             @Override
             File getMain() {
                 return mainFile
