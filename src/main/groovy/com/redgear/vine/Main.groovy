@@ -36,6 +36,7 @@ class Main {
     public static void main(String[] args) {
 
         try {
+            log.info("Args: {}", args.toList())
 
             def result = parseArgs(args)
 
@@ -77,7 +78,7 @@ class Main {
 
         install.addArgument('-n', '--name').nargs('?').help('Set an alternative name for the program (default is artifactId)')
         install.addArgument('-m', '--main').nargs('?').help('Provide the Main class for this program (default is to look in Manifest)')
-        install.addArgument('-a', '--additional-args').nargs('?').help('Provide a set of additional arguments to be inserted into the Run script for this program, which will pass them along to the JVM')
+        install.addArgument('-a', '--additional').nargs('?').help('Provide a set of additional arguments to be inserted into the Run script for this program, which will pass them along to the JVM')
         install.addArgument('coords').metavar('coordinates').required(true).help('The groupId:artifactId:version of the application in Maven')
 
         def remove = subParsers.addParser('remove').setDefault(taskKey, new RemoveTask()).help('Remove an application installed with vine')
@@ -151,7 +152,7 @@ class Main {
 
         config.installDir.mkdirs()
 
-        new ObjectMapper().writeValue(location.toFile(), config)
+        new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(location.toFile(), config)
 
         return config
     }

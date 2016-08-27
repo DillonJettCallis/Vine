@@ -1,0 +1,15 @@
+{
+  "packages": [
+    {
+      "name": "vine",
+      "groupId": "com.redgear",
+      "artifactId": "vine"
+    }, {
+      "name": "lein",
+      "groupId": "leiningen",
+      "artifactId": "leiningen",
+      "main": "clojure.main",
+      "additionalArgs": "-m leiningen.core.main"
+    }
+  ]
+}
