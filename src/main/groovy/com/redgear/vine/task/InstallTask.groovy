@@ -19,14 +19,79 @@ import java.nio.file.Path
 import java.util.jar.JarFile
 
 /**
- * Created by LordBlackHole on 8/16/2016.
+ * Task for installing a maven package into the VINE_HOME/bin dir.
+ *
+ * Example: 'vine install com.redgear:vine:0.1.0'
+ *
+ * Optional arguments:
+ * -n or --name: The name of the package, used in the name of the startup script,
+ * the folder and config files and will be the name used to remove or upgrade the artifact later.
+ * Defaults to the artifactId.
+ *
+ * -m or --main: The main class of the package to be used in the startup script.
+ * Defaults to the Main-Class in the package's manifest. If neither of these are supplied,
+ * the install will fail.
+ *
+ * -a or --additional: Extra arguments to be put into the startup script and passed
+ * to the JVM every time the project is run. Used for classes like leiningen which needs to run
+ * Clojure's main method and then needs to pass in the extra args '-m leiningen.core.main' to tell
+ * Clojure to run leiningen. In theory you should be able to pass in JVM args to configure memory or GC
+ * if you wanted, or to set other params.
+ *
+ *
+ * Maven Coords:
+ *
+ * Maven coordinates have several different combinations. The last argument will be split by ':' and the number
+ * of results to this determine what will happen next.
+ *
+ * One argument:
+ * Example: vine install vine
+ * name: vine
+ *
+ * 'vine' will be interpreted as the short-name of the package, and the endorsed configs will be checked to find
+ * the groupId and artifactId. Then the version lookup will be run and will install the latest version found.
+ *
+ * Two arguments:
+ * Example: vine install vine:0.1.0
+ * name: vine
+ * version: 0.1.0
+ *
+ * Like with one arg, 'vine' will be considered a short-name, and the endorsed configs will be checked. Unlike one are
+ * though, the version will be taken and used directly.
+ *
+ * Three arguments:
+ * Example: vine install com.redgear:vine:0.1.0
+ * groupId: com.redgear
+ * artifactId: vine
+ * version: 0.1.0
+ *
+ * Here no assumptions are made, the groupId, artifactId and version are taken literally.
+ *
+ * Four arguments:
+ * Example: vine install com.redgear:vine:jar:0.1.0
+ * groupId: com.redgear
+ * artifactId: vine
+ * version: 0.1.0
+ *
+ * Just like three args, but the third one is skipped, assumed to be the extension which isn't useful to us.
+ *
+ * @author Dillon Jett Callis
+ * @version 0.1.0
+ * @since 2016-8-16
  */
 class InstallTask implements Task {
 
     private static final Logger log = LoggerFactory.getLogger(InstallTask.class)
 
+    /**
+     * Main entry point to this Task from outside.
+     * @param config Parsed Config file.
+     * @param namespace ArgParse options.
+     */
     @Override
     void runTask(Config config, Namespace namespace) {
+        //TODO: Look into breaking this task down further. Some parts could be re-used elsewhere.
+
         Repository repo = new AetherRepo(config)
         def workingDir = config.installDir.toPath()
         String nameArg = namespace.getString('name')
@@ -99,6 +164,17 @@ class InstallTask implements Task {
 
     }
 
+    /**
+     * Checks maven for a binary zip of this package, and if it finds one will will install that, then
+     * make short-cut scripts to all of that package's scripts inside it's bin folder.
+     * @param repo The source Repo we're using.
+     * @param workingDir The VINE_HOME dir.
+     * @param name The name of this package, used for generating configs and folders for it.
+     * @param group The package's groupId
+     * @param artifact The package's artifactId
+     * @param version The package's version
+     * @return true if the bin was found, false if not.
+     */
     static boolean checkForBin(Repository repo, Path workingDir, String name, String group, String artifact, String version) {
         try {
             Repository.Package bin = repo.resolvePackage(group, artifact + ":zip:bin", version)
@@ -184,6 +260,12 @@ class InstallTask implements Task {
         return true
     }
 
+    /**
+     * Copies second arg into the folder of the first arg.
+     * @param dir Folder to copy file into.
+     * @param localFile File to copy into dir.
+     * @return The resulting copied file.
+     */
     static File copy(File dir, File localFile) {
         def fileName = localFile.name
 
@@ -198,7 +280,13 @@ class InstallTask implements Task {
         return newLocal
     }
 
-
+    /**
+     * Creates a .bat file at the location, passing in the main class, the libDir as -classpath and additionalArgs
+     * @param location The file to create.
+     * @param main The main class of the package.
+     * @param libDir The dir to be used as the classpath.
+     * @param additionalArgs And extra args we want to add to this script.
+     */
     static void createBatch(File location, String main, File libDir, String additionalArgs) {
         location.parentFile.mkdirs()
 
@@ -210,6 +298,13 @@ java -classpath "$libDir/*" $main $additionalArgs %*
 """
     }
 
+    /**
+     * Creates a shell script at the location, passing in the main class, the libDir as -classpath and additionalArgs
+     * @param location The file to create.
+     * @param main The main class of the package.
+     * @param libDir The dir to be used as the classpath.
+     * @param additionalArgs And extra args we want to add to this script.
+     */
     static void createBash(File location, String main, File libDir, String additionalArgs) {
         location.parentFile.mkdirs()
 
@@ -222,7 +317,12 @@ java -classpath "$libDir/*" $main $additionalArgs "\$@"
         location.setExecutable(true, true)
     }
 
-
+    /**
+     * Creates a .bat file that directs all it's output to another .bat file.
+     * @param location The new file to create.
+     * @param libDir The file to direct the new file to.
+     * @throws VineException if a script with this name already exists in the target dir.
+     */
     static void createBinBatch(File location, File libDir) {
         if(location.exists())
             throw new VineException("Batch script ${location} already exists. Have you allready installed this application?")
@@ -237,6 +337,12 @@ $libDir %*
 """
     }
 
+    /**
+     * Creates a shell script that directs all it's output to another script.
+     * @param location The new file to create.
+     * @param libDir The file to direct the new file to.
+     * @throws VineException if a script with this name already exists in the target dir.
+     */
     static void createBinBash(File location, File libDir) {
         if(location.exists())
             throw new VineException("Bash script ${location} already exists. Have you allready installed this application?")
@@ -246,12 +352,17 @@ $libDir %*
         location.delete()
 
         location << """
-$libDir
+$libDir "\$@"
 """
         location.setExecutable(true, true)
     }
 
-
+    /**
+     * Checks to see if there is already a config file for this package and if so throws and exception.
+     * @param workingDir The VINE_HOME path.
+     * @param name The name of the package to check.
+     * @throws VineException if there is already a package with this name.
+     */
     static void checkConfig(Path workingDir, String name) {
         def file = workingDir.resolve('data').resolve(name).toFile()
 
@@ -261,12 +372,24 @@ $libDir
 
     }
 
+    /**
+     * Writes out the InstalledData file for a package.
+     * @param location The File to put the install data.
+     * @param data The Data object to serialize to Json.
+     */
     static void writeData(File location, InstalledData data) {
         location.parentFile.mkdirs()
 
         new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(location, data)
     }
 
+    /**
+     * Tries to look up an Endorsed package by name.
+     * @param config
+     * @param name
+     * @throws VineException if no such short-name can be found.
+     * @return The Endorsed Package that contains the data on this package.
+     */
     static EndorsedPackage lookupPackage(Config config, String name) {
         for(uri in config.endorsedConfigs) {
 
@@ -289,6 +412,13 @@ $libDir
         throw new VineException("Tried to look up endorsed package $name but was unable to find it. ")
     }
 
+    /**
+     * Parses out the Maven coordinates from the raw string.
+     * @param config Config file, needed to look up Endorsed Packages.
+     * @param coords The raw maven coords: 'com.redgear:vine:0.1.0'
+     * @return Parsed Maven Coords.
+     * @throws VineException if the coords couldn't be parsed or were invalid.
+     */
     static Coords parseCoords(Config config, String coords) {
         def split = coords.split(":")
 
@@ -311,12 +441,24 @@ $libDir
 
 }
 
+/**
+ * Bean for holding Maven Coordinates.
+ *
+ * @author Dillon Jett Callis
+ * @version 0.1.0
+ * @since 2016-8-27
+ */
 class Coords {
 
+    //TODO: Look into reusing this class elsewhere + merging with EndorsedPackage.
     Coords() {
 
     }
 
+    /**
+     * Create Coords from EndorsedPackage
+     * @param endorsedPackage Source EndorsedPackage
+     */
     Coords(EndorsedPackage endorsedPackage) {
         this.name = endorsedPackage.name
         this.groupId = endorsedPackage.groupId

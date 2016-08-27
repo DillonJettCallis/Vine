@@ -9,12 +9,24 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
- * Created by LordBlackHole on 8/16/2016.
+ * Task to remove or uninstall an installed package.
+ *
+ * Example: 'vine remove ant'
+ * Uninstalls the ant package.
+ *
+ * @author Dillon Jett Callis
+ * @version 0.1.0
+ * @since 2016-8-16
  */
 class RemoveTask implements Task {
 
     private static final Logger log = LoggerFactory.getLogger(RemoveTask.class)
 
+    /**
+     * Main entry point to task.
+     * @param config Config file.
+     * @param namespace ArgParse arguments.
+     */
     @Override
     void runTask(Config config, Namespace namespace) {
         def workingDir = config.installDir.toPath()
@@ -39,7 +51,13 @@ class RemoveTask implements Task {
 
     }
 
-
+    /**
+     * Reads the given config file.
+     * @param file The file to load.
+     * @param name The name of the package, used purely for the exception.
+     * @return The loaded config.
+     * @throws VineException if the file does not exist.
+     */
     static InstalledData loadData(File file, String name) {
         log.debug "Loading config file: ${file}"
 
