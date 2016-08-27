@@ -14,6 +14,7 @@ class Config {
 
     List<Repo> repos = [new Repo(type: RepoType.M2, name: 'central', uri: URI.create('https://repo1.maven.org/maven2/'))]
 
+    List<URI> endorsedConfigs = [URI.create('https://raw.githubusercontent.com/RedGear/Vine/master/endorsed.json')]
 
 }
 

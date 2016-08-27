@@ -2,6 +2,8 @@ package com.redgear.vine.task
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.redgear.vine.config.Config
+import com.redgear.vine.config.EndorsedConfig
+import com.redgear.vine.config.EndorsedPackage
 import com.redgear.vine.config.InstallType
 import com.redgear.vine.config.InstalledData
 import com.redgear.vine.exception.VineException
@@ -29,32 +31,23 @@ class InstallTask implements Task {
         def workingDir = config.installDir.toPath()
         String nameArg = namespace.getString('name')
         String mainArg = namespace.getString('main')
-        String additionalArgs = namespace.getString('additional-args') ?: ''
-
-        String coords =  namespace.getString('coords')
 
 
         log.info 'Installing'
 
 
+        def coords = parseCoords(config, namespace.getString('coords'))
 
-        def split = coords.split(":")
 
-        if(split.length < 3 || split.length > 4) {
-            throw new VineException("Invalid Maven Coords: $coords")
-        }
+        def group = coords.groupId
+        def artifact = coords.artifactId
+        def version = coords.version
 
-        def group = split[0]
-        def artifact = split[1]
-        def version = split[2]
+        def name = nameArg ?: coords.name ?: artifact
 
-        //So we can take the ones that have group:artifact:jar:version.
-        if(split.length == 4) {
-            artifact = split[2]
-            version = split[3]
-        }
+        String additionalArgs = namespace.getString('additional') ?: coords.additionalArgs ?: ''
 
-        def name = nameArg ?: artifact
+        log.info 'additionalArgs: {}', additionalArgs
 
         checkConfig(workingDir, name)
 
@@ -66,7 +59,7 @@ class InstallTask implements Task {
 
 
 
-        def main = mainArg ?: new JarFile(mod.main).manifest.mainAttributes.getValue("Main-Class")
+        def main = mainArg ?: coords.main ?: new JarFile(mod.main).manifest.mainAttributes.getValue("Main-Class")
 
         if(!main)
             throw new VineException("No main method specified!")
@@ -268,7 +261,78 @@ $libDir
     static void writeData(File location, InstalledData data) {
         location.parentFile.mkdirs()
 
-        new ObjectMapper().writeValue(location, data)
+        new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(location, data)
+    }
+
+    static EndorsedPackage lookupPackage(Config config, String name) {
+        for(uri in config.endorsedConfigs) {
+
+            EndorsedConfig conf = null
+
+            new BufferedReader(new InputStreamReader(uri.toURL().openStream())).withReader {
+                conf = new ObjectMapper().readValue(it, EndorsedConfig.class)
+            }
+
+
+            if(conf != null) {
+                def pack = conf.packages.find { it.name == name }
+
+                if (pack != null)
+                    return pack
+            }
+
+        }
+
+        throw new VineException("Tried to look up endorsed package $name but was unable to find it. ")
+    }
+
+    static Coords parseCoords(Config config, String coords) {
+        def split = coords.split(":")
+
+
+        switch (split.length) {
+            case 1:
+                return new Coords(lookupPackage(config, split[0]))
+            case 2:
+                def coord = new Coords(lookupPackage(config, split[0]))
+                coord.version = split[1]
+                return coord
+            case 3:
+                return new Coords(groupId: split[0], artifactId: split[1], version: split[2])
+            case 4:
+                return new Coords(groupId: split[0], artifactId: split[1], version: split[3])
+            default:
+                throw new VineException("Invalid Maven Coords: $coords")
+        }
     }
 
 }
+
+class Coords {
+
+    Coords() {
+
+    }
+
+    Coords(EndorsedPackage endorsedPackage) {
+        this.name = endorsedPackage.name
+        this.groupId = endorsedPackage.groupId
+        this.artifactId = endorsedPackage.artifactId
+        this.main = endorsedPackage.main
+        this.additionalArgs = endorsedPackage.additionalArgs
+    }
+
+    String name
+
+    String groupId
+
+    String artifactId
+
+    String version
+
+    String main
+
+    String additionalArgs
+
+}
+
