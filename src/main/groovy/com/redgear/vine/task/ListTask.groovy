@@ -8,12 +8,21 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
- * Created by LordBlackHole on 8/17/2016.
+ * Task to print out a list of all installed packages.
+ *
+ * @author Dillon Jett Callis
+ * @version 0.1.0
+ * @since 2016-8-17
  */
 class ListTask implements Task {
 
     private static final Logger log = LoggerFactory.getLogger(ListTask.class)
 
+    /**
+     * Main entry point to this Task.
+     * @param config Config file.
+     * @param namespace ArgParse arguments.
+     */
     @Override
     void runTask(Config config, Namespace namespace) {
         def verbose = namespace.getBoolean('verbose')
@@ -37,6 +46,11 @@ class ListTask implements Task {
 
     }
 
+    /**
+     * Loads the given Data file.
+     * @param file InstalledData config file to load.
+     * @return The loaded InstalledData
+     */
     static InstalledData loadData(File file) {
         return new ObjectMapper().readValue(file, InstalledData.class)
     }

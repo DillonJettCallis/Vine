@@ -17,9 +17,19 @@ import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.nio.file.Paths
 
+/**
+ *
+ * Main class and entry point to the application.
+ *
+ * @author Dillon Jett Callis
+ * @version 0.1.0
+ * @since 2016-7-4
+ */
 class Main {
 
     private static final Logger log = LoggerFactory.getLogger(Main.class)
+
+    /** Used with ArgParse as key. **/
     private static final String taskKey = 'task'
 
     /**
@@ -31,15 +41,14 @@ class Main {
      * %VINE_HOME%/config.json - if env is supplied, use. If config is missing, gen it there and then use.
      * user.home/.vine/config.json - If missing, gen there and then use.
      *
-     * @param args
+     * @param args Entry arguments
      */
     public static void main(String[] args) {
 
         try {
-            log.info("Args: {}", args.toList())
-
             def result = parseArgs(args)
 
+            //TODO: This doesn't actually seem to work. We need to figure out how to configure simple or get a new slf4j logger we can configure programmatically.
             if (result.getBoolean('debug')) {
                 System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "all")
             }
@@ -62,7 +71,15 @@ class Main {
         }
     }
 
+    /**
+     * Parses the input arguments and returns the ArgParse Namespace.
+     *
+     * @param args Input arguments
+     * @return ArgParse Namespace object containing parsed arguments.
+     */
     static Namespace parseArgs(String[] args) {
+        //TODO: Abstract away Namespace so we aren't as coupled to ArgParse. Maybe build a set of config classes we hand build from parsed output.
+
         def parser = ArgumentParsers.newArgumentParser('vine')
 
         parser.addArgument('-c', '--config').nargs('?').help('Alternative config file location')
@@ -95,10 +112,19 @@ class Main {
 
 
         return parser.parseArgsOrFail(args)
-
     }
 
-
+    /**
+     * Reads in the config file, checking first the passed argument,
+     * then the VINE_HOME system property,
+     * and finally looking in ~/.vine
+     *
+     * If not found there, it will generate the default config.
+     *
+     * @param config File name of the Config file to load, or null to use the next level of defaults.
+     * @return The config file that has been either loaded or generated
+     * @throws VineException if a config file was passed in, but not found.
+     */
     static Config readConfigs(String config) {
         log.debug 'Reading configs'
 
@@ -137,12 +163,22 @@ class Main {
         }
     }
 
+    /**
+     * Reads the config file from the given path.
+     * @param location Path of the config file.
+     * @return The loaded config object.
+     */
     static Config readConfigFile(Path location) {
         log.debug "Reading config file: ${location}"
 
         return new ObjectMapper().readValue(location.toFile(), Config.class)
     }
 
+    /**
+     * Writes out the default config to the given path.
+     * @param location Path where to create the config.
+     * @return The generated default config.
+     */
     static Config generateDefaultConfigs(Path location) {
         log.debug "Generating default config file at: ${location}"
 

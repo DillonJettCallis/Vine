@@ -9,12 +9,18 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
- * Created by ft4 on 8/18/2016.
+ * Downloads the given arguments but does not install them.
+ *
+ * @author Dillon Jett Callis
+ * @version 0.1.0
+ * @since 2016-8-18
+ *
  */
 class ResolveTask implements Task {
 
     private static final Logger log = LoggerFactory.getLogger(ResolveTask.class)
 
+    //TODO: Merge some of this functionality with Install.
     @Override
     void runTask(Config config, Namespace namespace) {
         Repository repo = new AetherRepo(config)
