@@ -218,6 +218,8 @@ java -classpath "$libDir/*" $main $additionalArgs %*
         location << """
 java -classpath "$libDir/*" $main $additionalArgs "\$@"
 """
+
+        location.setExecutable(true, true)
     }
 
 
@@ -246,6 +248,7 @@ $libDir %*
         location << """
 $libDir
 """
+        location.setExecutable(true, true)
     }
 
 
