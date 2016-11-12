@@ -3,6 +3,7 @@ package com.redgear.vine
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.redgear.vine.config.Config
 import com.redgear.vine.exception.VineException
+import com.redgear.vine.task.CleanCacheTask
 import com.redgear.vine.task.InstallTask
 import com.redgear.vine.task.ListTask
 import com.redgear.vine.task.RemoveTask
@@ -107,9 +108,16 @@ class Main {
 
         def resolve = subParsers.addParser('resolve').setDefault(taskKey, new ResolveTask())
                 .help('''Download maven artifacts into local cache and return a ';' denoted string of all their full file paths ''')
-        resolve.addArgument('-p', '--pretty').action(Arguments.storeTrue())setDefault(false)
+        resolve.addArgument('-p', '--pretty').action(Arguments.storeTrue()).setDefault(false)
         resolve.addArgument('args').metavar('args').nargs('+').help('A list of groupId:artifactId:version maven coordinates')
 
+        def cleanCache = subParsers.addParser('cleanCache').setDefault(taskKey, new CleanCacheTask()).help('Remove junk from your local maven cache.')
+
+        cleanCache.addArgument('-l', '--locals').nargs('?').action(Arguments.storeTrue()).setDefault(false)
+        cleanCache.addArgument('-s', '--snapshots').nargs('?').action(Arguments.storeTrue()).setDefault(false)
+        cleanCache.addArgument('-j', '--jarMissing').nargs('?').action(Arguments.storeTrue()).setDefault(false)
+        cleanCache.addArgument('-p', '--pomMissing').nargs('?').action(Arguments.storeTrue()).setDefault(false)
+        cleanCache.addArgument('-e', '--empty').nargs('?').action(Arguments.storeFalse()).setDefault(true)
 
         return parser.parseArgsOrFail(args)
     }
