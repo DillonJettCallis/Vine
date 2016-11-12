@@ -1,10 +1,9 @@
 package com.redgear.vine.task
 
 import com.redgear.vine.config.Config
-import net.sourceforge.argparse4j.inf.Namespace
+import com.redgear.vine.config.Options
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
 
 /**
  *
@@ -20,16 +19,8 @@ class CleanCacheTask implements Task {
 
 
     @Override
-    void runTask(Config config, Namespace namespace) {
+    void runTask(Config config, Options ops) {
         def repo = config.localCache
-
-        def ops = new Options()
-
-        ops.cleanLocals = namespace.getBoolean('locals')
-        ops.cleanSnapshots = namespace.getBoolean('snapshots')
-        ops.cleanMissingJar = namespace.getBoolean('jarMissing')
-        ops.cleanMissingPom = namespace.getBoolean('pomMissing')
-        ops.cleanEmpty = namespace.getBoolean('empty')
 
         log.info "Options: {}", ops
 
@@ -48,7 +39,7 @@ class CleanCacheTask implements Task {
 
                 if(!children.toList().any{it.isDirectory()}) {
 
-                    if(ops.cleanMissingPom) {
+                    if(ops.pomMissing) {
                         def pom = children.toList().find { it.name.endsWith('.pom') }
 
                         if(pom == null) {
@@ -56,7 +47,7 @@ class CleanCacheTask implements Task {
                         }
                     }
 
-                    if(ops.cleanMissingJar) {
+                    if(ops.jarMissing) {
                         def jar = children.toList().find { it.name.endsWith('.jar') }
 
                         if(jar == null) {
@@ -64,7 +55,7 @@ class CleanCacheTask implements Task {
                         }
                     }
 
-                    if (ops.cleanSnapshots) {
+                    if (ops.snapshots) {
                         def pom = children.toList().find { it.name.endsWith('.pom') }
 
                         if (pom != null) {
@@ -77,7 +68,7 @@ class CleanCacheTask implements Task {
                         }
                     }
 
-                    if (ops.cleanLocals) {
+                    if (ops.locals) {
 
                         def metadata = children.toList().find { it.name == 'maven-metadata-local.xml' }
 
@@ -98,32 +89,14 @@ class CleanCacheTask implements Task {
                 }
             }
 
-            if(ops.cleanEmpty && !file.listFiles()) {
+            if(ops.empty && !file.listFiles()) {
                 file.delete()
             }
         }
     }
 
-    class Options {
 
-        boolean cleanLocals = false
-        boolean cleanSnapshots = false
-        boolean cleanMissingJar = false
-        boolean cleanMissingPom = false
-        boolean cleanEmpty = true
-
-
-        @Override
-        public String toString() {
-            return "{\"className\": \"" + Options.class + "\"" +
-                    ",\"cleanLocals\": \"" + cleanLocals + "\"" +
-                    ",\"cleanSnapshots\": \"" + cleanSnapshots + "\"" +
-                    ",\"cleanMissingJar\": \"" + cleanMissingJar + "\"" +
-                    ",\"cleanMissingPom\": \"" + cleanMissingPom + "\"" +
-                    ",\"cleanEmpty\": \"" + cleanEmpty + "\"" +
-                    '}';
-        }
-    }
 
 
 }
+
