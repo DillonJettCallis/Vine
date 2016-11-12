@@ -1,15 +1,10 @@
 package com.redgear.vine.task
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.redgear.vine.config.Config
-import com.redgear.vine.config.EndorsedConfig
-import com.redgear.vine.config.EndorsedPackage
-import com.redgear.vine.config.InstallType
-import com.redgear.vine.config.InstalledData
+import com.redgear.vine.config.*
 import com.redgear.vine.exception.VineException
 import com.redgear.vine.repo.Repository
 import com.redgear.vine.repo.impl.AetherRepo
-import net.sourceforge.argparse4j.inf.Namespace
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -89,19 +84,19 @@ class InstallTask implements Task {
      * @param namespace ArgParse options.
      */
     @Override
-    void runTask(Config config, Namespace namespace) {
+    void runTask(Config config, Options options) {
         //TODO: Look into breaking this task down further. Some parts could be re-used elsewhere.
 
         Repository repo = new AetherRepo(config)
         def workingDir = config.installDir.toPath()
-        String nameArg = namespace.getString('name')
-        String mainArg = namespace.getString('main')
+        String nameArg = options.name
+        String mainArg = options.main
 
 
         log.info 'Installing'
 
 
-        def coords = parseCoords(config, namespace.getString('coords'))
+        def coords = parseCoords(config, options.coords)
 
 
         def group = coords.groupId
@@ -110,7 +105,7 @@ class InstallTask implements Task {
 
         def name = nameArg ?: coords.name ?: artifact
 
-        String additionalArgs = namespace.getString('additional') ?: coords.additionalArgs ?: ''
+        String additionalArgs = options.additional ?: coords.additionalArgs ?: ''
 
         log.info 'additionalArgs: {}', additionalArgs
 

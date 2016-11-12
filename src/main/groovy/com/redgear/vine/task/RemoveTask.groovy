@@ -3,8 +3,8 @@ package com.redgear.vine.task
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.redgear.vine.config.Config
 import com.redgear.vine.config.InstalledData
+import com.redgear.vine.config.Options
 import com.redgear.vine.exception.VineException
-import net.sourceforge.argparse4j.inf.Namespace
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -25,13 +25,13 @@ class RemoveTask implements Task {
     /**
      * Main entry point to task.
      * @param config Config file.
-     * @param namespace ArgParse arguments.
+     * @param options ArgParse arguments.
      */
     @Override
-    void runTask(Config config, Namespace namespace) {
+    void runTask(Config config, Options options) {
         def workingDir = config.installDir.toPath()
 
-        def name = namespace.getString('name')
+        def name = options.name
 
         log.info "Removing application: ${name}"
 

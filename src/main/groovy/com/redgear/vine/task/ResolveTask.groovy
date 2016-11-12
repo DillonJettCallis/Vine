@@ -1,10 +1,10 @@
 package com.redgear.vine.task
 
 import com.redgear.vine.config.Config
+import com.redgear.vine.config.Options
 import com.redgear.vine.exception.VineException
 import com.redgear.vine.repo.Repository
 import com.redgear.vine.repo.impl.AetherRepo
-import net.sourceforge.argparse4j.inf.Namespace
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -22,9 +22,9 @@ class ResolveTask implements Task {
 
     //TODO: Merge some of this functionality with Install.
     @Override
-    void runTask(Config config, Namespace namespace) {
+    void runTask(Config config, Options options) {
         Repository repo = new AetherRepo(config)
-        List<String> args = namespace.getList('args')
+        List<String> args = options.args
 
         log.debug "Resolving ${args.size()} artifacts"
 
@@ -51,7 +51,7 @@ class ResolveTask implements Task {
             [pack.main] + pack.dependencies
         }.flatten().toSet()
 
-        if(namespace.getBoolean('pretty')) {
+        if(options.pretty) {
             deps.each {println it}
         } else {
             println deps.join(';')

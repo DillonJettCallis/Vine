@@ -1,6 +1,7 @@
 package com.redgear.vine.task
 
 import com.redgear.vine.config.Config
+import com.redgear.vine.config.Options
 import net.sourceforge.argparse4j.inf.Namespace
 
 /**
@@ -19,7 +20,7 @@ interface Task {
      * @param config The config file.
      * @param namespace An ArgParse class holding the parsed command line options.
      */
-    void runTask(Config config, Namespace namespace)
+    void runTask(Config config, Options options)
 
 
 }

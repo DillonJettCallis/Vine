@@ -3,7 +3,7 @@ package com.redgear.vine.task
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.redgear.vine.config.Config
 import com.redgear.vine.config.InstalledData
-import net.sourceforge.argparse4j.inf.Namespace
+import com.redgear.vine.config.Options
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -21,11 +21,11 @@ class ListTask implements Task {
     /**
      * Main entry point to this Task.
      * @param config Config file.
-     * @param namespace ArgParse arguments.
+     * @param options ArgParse arguments.
      */
     @Override
-    void runTask(Config config, Namespace namespace) {
-        def verbose = namespace.getBoolean('verbose')
+    void runTask(Config config, Options options) {
+        def verbose = options.verbose
         def files = config.installDir.toPath().resolve('data').toFile().listFiles()
 
         if(!files) {

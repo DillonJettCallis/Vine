@@ -2,6 +2,7 @@ package com.redgear.vine
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.redgear.vine.config.Config
+import com.redgear.vine.config.Options
 import com.redgear.vine.exception.VineException
 import com.redgear.vine.task.CleanCacheTask
 import com.redgear.vine.task.InstallTask
@@ -47,20 +48,20 @@ class Main {
     public static void main(String[] args) {
 
         try {
-            def result = parseArgs(args)
+            def result = parseArgs(args).attrs as Options
 
             //TODO: This doesn't actually seem to work. We need to figure out how to configure simple or get a new slf4j logger we can configure programmatically.
-            if (result.getBoolean('debug')) {
+            if (result.debug) {
                 System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "all")
             }
 
-            if (result.getBoolean('quiet')) {
+            if (result.quiet) {
                 System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "none")
             }
 
-            def config = readConfigs(result.getString('config'))
+            def config = readConfigs(result.config)
 
-            def task = (Task) result.get(taskKey)
+            def task = result.task
 
             task.runTask(config, result)
         } catch (VineException e) {
