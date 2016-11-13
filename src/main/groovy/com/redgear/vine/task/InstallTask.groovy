@@ -90,42 +90,38 @@ class InstallTask implements Task {
         Repository repo = new AetherRepo(config)
         def workingDir = config.installDir.toPath()
         String nameArg = options.name
-        String mainArg = options.main
-
 
         log.info 'Installing'
 
 
         def coords = parseCoords(config, options.coords)
 
-
-        def group = coords.groupId
-        def artifact = coords.artifactId
-        def version = coords.version
-
-        def name = nameArg ?: coords.name ?: artifact
-
-        String additionalArgs = options.additional ?: coords.additionalArgs ?: ''
-
-        log.info 'additionalArgs: {}', additionalArgs
+        def name = nameArg ?: coords.name ?: coords.artifactId
 
         checkConfig(workingDir, name)
 
+        if(coords.ext == 'zip') {
+            installBin(repo, workingDir, name, coords)
+        } else {
+            installJar(repo, coords, workingDir, name, options)
+        }
 
-        if(checkForBin(repo, workingDir, name, group, artifact, version))
-            return
 
-        Repository.Package mod = repo.resolvePackage(group, artifact, version)
+    }
 
+    private static void installJar(Repository repo, Coords coords, Path workingDir, String name, Options options) {
+        Repository.Package mod = repo.resolvePackage(coords)
 
+        String mainArg = options.main
+        String additionalArgs = options.additional ?: coords.additionalArgs ?: ''
 
         def main = mainArg ?: coords.main ?: new JarFile(mod.main).manifest.mainAttributes.getValue("Main-Class")
 
-        if(!main)
+        if (!main)
             throw new VineException("No main method specified!")
 
 
-        File libDir =  workingDir.resolve("lib/$name").toFile()
+        File libDir = workingDir.resolve("lib/$name").toFile()
         libDir.deleteDir()
         libDir.mkdirs()
 
@@ -133,11 +129,12 @@ class InstallTask implements Task {
         def data = new InstalledData()
 
         data.installDir = libDir
-        data.groupId = group
-        data.artifactId = artifact
-        data.version = version
+        data.groupId = coords.groupId
+        data.artifactId = coords.artifactId
+        data.version = coords.version
         data.name = name
         data.type = InstallType.JAR
+        data.main = main
 
         copy(libDir, mod.main)
         mod.dependencies.each { copy(libDir, it) }
@@ -155,8 +152,6 @@ class InstallTask implements Task {
         data.scripts = [batFile, bashFile]
 
         writeData(workingDir.resolve('data').resolve(name + '.json').toFile(), data)
-
-
     }
 
     /**
@@ -170,89 +165,82 @@ class InstallTask implements Task {
      * @param version The package's version
      * @return true if the bin was found, false if not.
      */
-    static boolean checkForBin(Repository repo, Path workingDir, String name, String group, String artifact, String version) {
-        try {
-            Repository.Package bin = repo.resolvePackage(group, artifact + ":zip:bin", version)
+    static void installBin(Repository repo, Path workingDir, String name, Coords coords) {
 
-            def libDir = workingDir.resolve("lib/$name")
+        Repository.Package bin = repo.resolvePackage(coords)
 
-            libDir.toFile().mkdirs()
+        def libDir = workingDir.resolve("lib/$name")
 
-            log.info 'We found a bin: {}', bin
+        libDir.toFile().mkdirs()
 
-            def zip = new ZipFile(bin.main)
+        log.info 'We found a bin: {}', bin
 
-            zip.entries.each { entry ->
-                def snippedName = entry.name.substring(entry.name.indexOf('/') + 1)
+        def zip = new ZipFile(bin.main)
 
-                log.debug 'Found entry: {}, snipped: {}', entry.name, snippedName
+        zip.entries.each { entry ->
+            def snippedName = entry.name.substring(entry.name.indexOf('/') + 1)
 
-                if(snippedName.isEmpty())
-                    return
+            log.debug 'Found entry: {}, snipped: {}', entry.name, snippedName
 
-                if(snippedName.endsWith('/'))
-                    libDir.resolve(snippedName).toFile().mkdir()
-                else
-                    libDir.resolve(snippedName).withOutputStream {
-                        it << zip.getInputStream(entry)
-                    }
-            }
+            if(snippedName.isEmpty())
+                return
 
-            def data = new InstalledData()
+            if(snippedName.endsWith('/'))
+                libDir.resolve(snippedName).toFile().mkdir()
+            else
+                libDir.resolve(snippedName).withOutputStream {
+                    it << zip.getInputStream(entry)
+                }
+        }
 
-            data.installDir = libDir.toFile()
-            data.groupId = group
-            data.artifactId = artifact
-            data.version = version
-            data.name = name
-            data.type = InstallType.BIN
-            data.scripts = []
+        def data = new InstalledData()
 
-            def sourceDir = libDir.resolve('bin')
+        data.installDir = libDir.toFile()
+        data.groupId = coords.groupId
+        data.artifactId = coords.artifactId
+        data.version = coords.version
+        data.name = name
+        data.type = InstallType.BIN
+        data.scripts = []
 
-            if(sourceDir.toFile().exists()) {
-                def children = sourceDir.toFile().listFiles()
+        def sourceDir = libDir.resolve('bin')
 
-                if(children) {
-                    children.findAll {
-                        it.name.endsWith('.cmd') || it.name.endsWith('.bat')
-                    }.each {
+        if(sourceDir.toFile().exists()) {
+            def children = sourceDir.toFile().listFiles()
 
-                        log.debug 'Found batch script: {}', it.name
+            if(children) {
+                children.findAll {
+                    it.name.endsWith('.cmd') || it.name.endsWith('.bat')
+                }.each {
 
-                        def binDir = workingDir.resolve('bin')
-                        def fileName = it.name.substring(0, it.name.lastIndexOf('.'))
+                    log.debug 'Found batch script: {}', it.name
 
-                        def batFile = binDir.resolve(fileName + '.bat').toFile()
+                    def binDir = workingDir.resolve('bin')
+                    def fileName = it.name.substring(0, it.name.lastIndexOf('.'))
 
-                        createBinBatch(batFile, it)
+                    def batFile = binDir.resolve(fileName + '.bat').toFile()
 
-                        data.scripts.add(batFile)
+                    createBinBatch(batFile, it)
+
+                    data.scripts.add(batFile)
 
 
-                        def bashSource = sourceDir.resolve(fileName).toFile()
+                    def bashSource = sourceDir.resolve(fileName).toFile()
 
-                        if(bashSource.exists()) {
-                            def bashFile = binDir.resolve(fileName).toFile()
+                    if(bashSource.exists()) {
+                        def bashFile = binDir.resolve(fileName).toFile()
 
-                            log.debug 'Found bash script: {}', fileName
+                        log.debug 'Found bash script: {}', fileName
 
-                            createBinBash(bashFile, bashSource)
+                        createBinBash(bashFile, bashSource)
 
-                            data.scripts.add(bashFile)
-                        }
+                        data.scripts.add(bashFile)
                     }
                 }
             }
-
-            writeData(workingDir.resolve('data').resolve(name + '.json').toFile(), data)
-
-        } catch (Exception e) {
-            log.info "Couldn't find a bin"
-            return false
         }
 
-        return true
+        writeData(workingDir.resolve('data').resolve(name + '.json').toFile(), data)
     }
 
     /**
@@ -385,7 +373,7 @@ $libDir "\$@"
      * @throws VineException if no such short-name can be found.
      * @return The Endorsed Package that contains the data on this package.
      */
-    static EndorsedPackage lookupPackage(Config config, String name) {
+    static Coords lookupPackage(Config config, String name) {
         for(uri in config.endorsedConfigs) {
 
             EndorsedConfig conf = null
@@ -420,15 +408,17 @@ $libDir "\$@"
 
         switch (split.length) {
             case 1:
-                return new Coords(lookupPackage(config, split[0]))
+                return lookupPackage(config, split[0])
             case 2:
-                def coord = new Coords(lookupPackage(config, split[0]))
+                def coord = lookupPackage(config, split[0])
                 coord.version = split[1]
                 return coord
             case 3:
                 return new Coords(groupId: split[0], artifactId: split[1], version: split[2])
             case 4:
-                return new Coords(groupId: split[0], artifactId: split[1], version: split[3])
+                return new Coords(groupId: split[0], artifactId: split[1], ext: split[2], version: split[3])
+            case 5:
+                return new Coords(groupId: split[0], artifactId: split[1], ext: split[2], classifier: split[3], version: split[4])
             default:
                 throw new VineException("Invalid Maven Coords: $coords")
         }
@@ -436,43 +426,5 @@ $libDir "\$@"
 
 }
 
-/**
- * Bean for holding Maven Coordinates.
- *
- * @author Dillon Jett Callis
- * @version 0.1.0
- * @since 2016-8-27
- */
-class Coords {
 
-    //TODO: Look into reusing this class elsewhere + merging with EndorsedPackage.
-    Coords() {
-
-    }
-
-    /**
-     * Create Coords from EndorsedPackage
-     * @param endorsedPackage Source EndorsedPackage
-     */
-    Coords(EndorsedPackage endorsedPackage) {
-        this.name = endorsedPackage.name
-        this.groupId = endorsedPackage.groupId
-        this.artifactId = endorsedPackage.artifactId
-        this.main = endorsedPackage.main
-        this.additionalArgs = endorsedPackage.additionalArgs
-    }
-
-    String name
-
-    String groupId
-
-    String artifactId
-
-    String version
-
-    String main
-
-    String additionalArgs
-
-}
 

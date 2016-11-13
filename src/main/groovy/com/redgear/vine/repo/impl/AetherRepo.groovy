@@ -1,6 +1,7 @@
 package com.redgear.vine.repo.impl
 
 import com.redgear.vine.config.Config
+import com.redgear.vine.config.Coords
 import com.redgear.vine.exception.VineException
 import com.redgear.vine.repo.Repository
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils
@@ -52,17 +53,15 @@ class AetherRepo implements Repository {
 
 
     @Override
-    Package resolvePackage(String group, String artifactId, String version) {
+    Package resolvePackage(Coords coords) {
 
-        def mod = "$group:$artifactId:$version"
+        def mod = "$coords.groupId:$coords.artifactId:${coords.ext?:'jar'}:${coords.classifier ? coords.classifier + ":" : ''}$coords.version"
 
         log.info "Resolving: {}", mod
 
         Artifact artifact = new DefaultArtifact(mod);
 
-        DependencyFilter classpathFlter = DependencyFilterUtils.classpathFilter( JavaScopes.COMPILE,  );
-
-        DependencyFilterUtils.andFilter()
+        DependencyFilter classpathFlter = DependencyFilterUtils.classpathFilter( JavaScopes.COMPILE, JavaScopes.RUNTIME, JavaScopes.PROVIDED );
 
         CollectRequest collectRequest = new CollectRequest();
         collectRequest.setRoot( new Dependency( artifact, JavaScopes.COMPILE ) );

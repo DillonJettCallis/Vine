@@ -4,12 +4,70 @@
       "name": "vine",
       "groupId": "com.redgear",
       "artifactId": "vine"
-    }, {
+    },
+    {
       "name": "lein",
       "groupId": "leiningen",
       "artifactId": "leiningen",
       "main": "clojure.main",
       "additionalArgs": "-m leiningen.core.main"
+    },
+    {
+      "name": "maven",
+      "groupId": "org.apache.maven",
+      "artifactId": "apache-maven",
+      "classifier": "bin",
+      "ext": "zip"
+    },
+    {
+      "name": "sbt",
+      "groupId": "org.scala-sbt",
+      "artifactId": "sbt-launch"
+    },
+    {
+      "name": "groovy",
+      "groupId": "org.codehaus.groovy",
+      "artifactId": "groovy-binary",
+      "ext": "zip"
+    },
+    {
+      "name": "ant",
+      "groupId": "org.apache.ant",
+      "artifactId": "ant"
+    },
+    {
+      "name": "jgit",
+      "groupId": "org.eclipse.jgit",
+      "artifactId": "org.eclipse.jgit.pgm"
+    },
+    {
+      "name": "ivy",
+      "groupId": "org.apache.ivy",
+      "artifactId": "ivy"
+    },
+    {
+      "name": "clojure",
+      "groupId": "org.clojure",
+      "artifactId": "clojure"
+    },
+    {
+      "name": "jruby",
+      "groupId": "org.jruby",
+      "artifactId": "jruby-dist",
+      "classifier": "bin",
+      "ext": "zip"
+    },
+    {
+      "name": "jython",
+      "groupId": "org.python",
+      "artifactId": "jython-standalone"
+    },
+    {
+      "name": "spring",
+      "groupId": "org.springframework.boot",
+      "artifactId": "spring-boot-cli",
+      "classifier": "full",
+      "ext": "jar"
     }
   ]
 }
