@@ -4,15 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.redgear.vine.config.Config
 import com.redgear.vine.config.Options
 import com.redgear.vine.exception.VineException
-import com.redgear.vine.task.CleanCacheTask
-import com.redgear.vine.task.InstallTask
-import com.redgear.vine.task.ListTask
-import com.redgear.vine.task.RemoveTask
-import com.redgear.vine.task.ResolveTask
-import com.redgear.vine.task.Task
+import com.redgear.vine.task.*
 import net.sourceforge.argparse4j.ArgumentParsers
 import net.sourceforge.argparse4j.impl.Arguments
-import net.sourceforge.argparse4j.inf.Namespace
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -48,7 +42,7 @@ class Main {
     public static void main(String[] args) {
 
         try {
-            def result = parseArgs(args).attrs as Options
+            def result = parseArgs(args)
 
             //TODO: This doesn't actually seem to work. We need to figure out how to configure simple or get a new slf4j logger we can configure programmatically.
             if (result.debug) {
@@ -79,8 +73,7 @@ class Main {
      * @param args Input arguments
      * @return ArgParse Namespace object containing parsed arguments.
      */
-    static Namespace parseArgs(String[] args) {
-        //TODO: Abstract away Namespace so we aren't as coupled to ArgParse. Maybe build a set of config classes we hand build from parsed output.
+    static Options parseArgs(String[] args) {
 
         def parser = ArgumentParsers.newArgumentParser('vine')
 
@@ -120,7 +113,15 @@ class Main {
         cleanCache.addArgument('-p', '--pomMissing').nargs('?').action(Arguments.storeTrue()).setDefault(false)
         cleanCache.addArgument('-e', '--empty').nargs('?').action(Arguments.storeFalse()).setDefault(true)
 
-        return parser.parseArgsOrFail(args)
+        //TODO: Enable this when rename is fixed.
+//        def rename = subParsers.addParser('rename').setDefault(taskKey, new RenameTask()).help('Rename an application installed with vine')
+//        rename.addArgument('name').metavar('name').required(true).help('Old name of the application')
+//        rename.addArgument('newName').metavar('newName').required(true).help('New name of the application')
+
+        def info = subParsers.addParser('info').setDefault(taskKey, new InfoTask()).help('Display information of an application installed with vine')
+        info.addArgument('name').metavar('name').required(true).help('Name of the application to display')
+
+        return (parser.parseArgsOrFail(args)).attrs as Options
     }
 
     /**
