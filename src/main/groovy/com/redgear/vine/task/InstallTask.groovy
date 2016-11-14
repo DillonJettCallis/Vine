@@ -338,6 +338,7 @@ $libDir %*
 $libDir "\$@"
 """
         location.setExecutable(true, true)
+        libDir.setExecutable(true, true)
     }
 
     /**
